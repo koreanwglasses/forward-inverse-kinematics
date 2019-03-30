@@ -16,10 +16,10 @@
 
 %% Title
 \title{
-		%\vspace{-1in} 	
-		\usefont{OT1}{bch}{b}{n}
-		\normalfont \normalsize \textsc{Advanced Computer Graphics Spring 2019 (RPI)} \\ [10pt]
-		\huge Physics based Character Posing and Inverse Kinematics: Proposal \\
+        %\vspace{-1in}     
+        \usefont{OT1}{bch}{b}{n}
+        \normalfont \normalsize \textsc{Advanced Computer Graphics Spring 2019 (RPI)} \\ [10pt]
+        \huge Physics based Character Posing and Inverse Kinematics: Proposal \\
 }
 
 \usepackage{authblk}
@@ -32,24 +32,24 @@
 \selectlanguage{english}
 
 \section*{Introduction}
-Posing and animating rigs can be a pain for animators. Inverse kinematics solvers calculate the relative rotations of rigid bodies connected by different types of joints, which is useful for especially for robotics, and animation. However, when posing a rig for modelling or animation, some inverse kinematics solvers can unpredictable, and unintuitive, especially for large displacements. Inspired by how artists manually pose wooden armatures, I propose a physics based character posing and inverse kinematics algorithm.
+Posing and animating rigs can be a pain for animators. Inverse kinematics solvers calculate the relative rotations of rigid bodies connected by different types of joints, which is useful especially for robotics and animation. However, when posing a rig for modeling or animation, some inverse kinematics solvers can produce unpredictable, and unintuitive, especially for large displacements. Inspired by how artists manually pose wooden armatures, I propose a physics-based character posing and inverse kinematics algorithm.
 
 Cooper and Ballard \cite{Co} published a marker-based following algorithm that similarly constructs a physical model to simulate markers dragging the rig into position and use the Open Dynamic Physics engine to run their simulation. My algorithm will expand on this paper by focusing on posing. As described below, I will be implementing a simple physics engine and also be interpolating the motion of the control point to ensure predictable convergence.
 
-iTasC, published my Smith et al. \cite{Sm} includes an algorithm for solving inverse kinematics, which is available in Blender. I will be comparing the performance of my algorithm with the iTasC algorithm in Blender based on the objective points below. Kulpa and Multon \cite{Ku} have a hierarchical algorithm for IK on humanoid rigs that is both quick but also calculates realistic poses for humans. FABRIK by Artistidou and Lasenby \cite{Ar} have an inverse-kinematics solver more geared toward robotics. These are both iterative methods that approximate the solution without without transforming the problem into finding a minimum on a parameter space. 
+iTasC published by Smith et al. \cite{Sm} includes an algorithm for solving inverse kinematics, which is available in Blender. I will be comparing the performance of my algorithm with the iTasC algorithm in Blender based on the objective points below. Kulpa and Multon \cite{Ku} have a hierarchical algorithm for IK on humanoid rigs that is both quick but also calculates realistic poses for humans. FABRIK by Artistidou and Lasenby \cite{Ar} have an inverse-kinematics solver more geared toward robotics. These are both iterative methods that approximate the solution without transforming the problem into finding a minimum on a parameter space. 
 
 Pickl's master thesis \cite{Pi} is a great resource for understanding rigid body dynamics. This paper will be the primary reference for rigid body dynamics.
 
-Another advantage of the physics based solver is that it is not an exact solver. That way, the target points and constraints can be in impossible configurations, but the algorithm will find a pose that is a good compromise.
+Another advantage of the physics-based solver is that it is not an exact solver. That way, the target-points and constraints can be in impossible configurations, but the algorithm will find a pose that is a good compromise.
 
-\section*{Objectives} The objectives of the physics based character posing algorithm are:
+\section*{Objectives} The objectives of the physics-based character posing algorithm are:
 \begin{itemize}
     \item Accuracy. The end-effectors should end up close to their target position.
     \item Predictability. The solution should be close to the user's expectations.  
     \item Intuitiveness. The interface should be easy to use 
 \end{itemize}
 
-Accuracy can be evaluated quuantitively. Predictability and intuitiveness will be evaluated quuantitively by comparing it wil other IK solvers in Blender. While speed is also a consideration, it will not be the focus of this project, since the limitations of the Blender plugin API makes it difficult to measure the true performance of the algorithm.
+Accuracy can be evaluated quantitatively. Predictability and intuitiveness will be evaluated qualitatively by comparing it with other IK solvers in Blender. While speed is also a consideration, it will not be the focus of this project, since the limitations of the Blender plugin API makes it difficult to measure the true performance of the algorithm.
 
 \section*{Algorithm}
 
@@ -69,16 +69,16 @@ Accuracy can be evaluated quuantitively. Predictability and intuitiveness will b
 \begin{itemize}
     \item External torques
     \item Inter-joint forces
-    \item Inter-joint torques
+    \item Torsion forces
 \end{itemize}
 
 \section*{Project Timeline}
 
-The following is an outline what I will accomplish by each week.
+The following is an outline of what I will accomplish each week.
 
 \paragraph{Week 0.} I already worked through the Blender API and I have a simple plugin working. I also currently have things moving, and multi-joint physics working on the plane.
 
-\paragraph{Week 1.} Get multi-joint physics physics working in 3D space, and get axial torques to work. Model rotation constraints as counter-rotation springs. To demonstrate, I will pose a simple two-joint model (in real time).
+\paragraph{Week 1.} Get multi-joint physics working in 3D space and get axial torques to work. Model rotation constraints as counter-rotation springs. To demonstrate, I will pose a simple two-joint model (in real time).
 
 \paragraph{Week 2.} Get physics working on branching/multi joints (hip/shoulders). To demonstrate, I will pose a simple field-goal shaped model.
 
