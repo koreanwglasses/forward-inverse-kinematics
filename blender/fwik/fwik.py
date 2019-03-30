@@ -64,7 +64,7 @@ class PhysBone:
     
     def compute_angular_acceleration(self):
         Icm = self.compute_moment()
-        return Icm.inverted() * self.net_torque - (Icm.inverted() * self.new_angular_velocity).cross(Icm * self.new_angular_velocity)
+        return Icm.inverted() * (self.net_torque - self.new_angular_velocity.cross(Icm * self.new_angular_velocity))
 
     def compute_linear_acceleration(self):
         return self.net_force / self.bone.get_mass()
@@ -119,11 +119,8 @@ class PhysBone:
         angular_accel = self.compute_angular_acceleration()
         self.new_angular_velocity += angular_accel * dt
 
-        local_angular_velocity = self.new_angular_velocity.copy()
-        local_angular_velocity.rotate(self.get_world_rotation().inverted())
-
-        axis = local_angular_velocity.normalized()
-        angle = local_angular_velocity.length
+        axis = self.new_angular_velocity.normalized()
+        angle = self.new_angular_velocity.length
 
         delta_rot = Quaternion(axis, angle * dt)
 
@@ -272,11 +269,11 @@ class Simulator:
 
             # Internal Forces (joint forces)
             # iters = 0
-            # for _ in range(5 * len(bones) * len(bones)):
-            #     iters += 1
-            #     max_diff = internal_forces()
-            #     if max_diff < 0.001:
-            #         break
+            for _ in range(5 * len(bones) * len(bones)):
+                # iters += 1
+                max_diff = internal_forces()
+                if max_diff < 0.001:
+                    break
             # print(iters, max_diff)
 
             # integrate
