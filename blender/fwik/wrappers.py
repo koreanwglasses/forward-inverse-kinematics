@@ -45,7 +45,7 @@ class FWIKBone:
     def get_length(self):
         return (self.get_head_position() - self.get_tail_position()).length
 
-    def get_local_rotation(self):
+    def get_axial_rotation(self):
         mode = self.pose_bone.rotation_mode
         if mode == 'QUATERNION':
             return self.pose_bone.rotation_quaternion.copy()
@@ -54,7 +54,7 @@ class FWIKBone:
         else:
             return self.pose_bone.rotation_euler.to_quaternion()
 
-    def set_local_rotation(self, lr):
+    def set_axial_rotation(self, lr):
         mode = self.pose_bone.rotation_mode
         if mode == 'QUATERNION':
             self.pose_bone.rotation_quaternion = lr
@@ -65,6 +65,19 @@ class FWIKBone:
 
     def get_world_rotation(self):
         return (self.armature.matrix_world * self.pose_bone.matrix).to_quaternion()
+
+    def get_bone_axes_to_world(self):
+        x = self.pose_bone.x_axis
+        y = self.pose_bone.y_axis
+        z = self.pose_bone.z_axis
+
+        bone_axes = mathutils.Matrix([
+            [ x.x, y.x, z.x ],
+            [ x.y, y.y, z.y ],
+            [ x.z, y.z, z.z ]
+        ])
+
+        return self.armature.matrix_world.to_3x3() * bone_axes
 
     def get_mass(self):
         return self.pose_bone['fwik_mass']

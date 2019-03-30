@@ -14,7 +14,7 @@ class PhysBone:
         self.bone = bone
 
         # Physics parameters
-        self.new_local_rotation = self.bone.get_local_rotation()
+        self.new_axial_rotation = self.bone.get_axial_rotation()
         self.new_angular_velocity = self.bone.get_angular_velocity()
         self.new_linear_velocity = self.bone.get_linear_velocity()
 
@@ -114,24 +114,32 @@ class PhysBone:
 
         self.net_torque += torque
 
+    def get_world_to_axial(self):
+        bone_axes = self.bone.get_bone_axes_to_world()
+        axial = self.bone.get_axial_rotation().to_matrix()
+
+        return axial * bone_axes.inverted()
+
     # Find new position and rotation based on force and torque
     def integrate(self, dt):
         angular_accel = self.compute_angular_acceleration()
         self.new_angular_velocity += angular_accel * dt
 
-        axis = self.new_angular_velocity.normalized()
-        angle = self.new_angular_velocity.length
+        axial_angular_velocity = self.get_world_to_axial() * self.new_angular_velocity
+
+        axis = axial_angular_velocity.normalized()
+        angle = axial_angular_velocity.length
 
         delta_rot = Quaternion(axis, angle * dt)
 
-        self.new_local_rotation.rotate(delta_rot)
+        self.new_axial_rotation.rotate(delta_rot)
 
     def apply(self):
         '''
         Apply updated values for rotation, angular velocity, and linear velocity
         to the wrapped bone
         '''
-        self.bone.set_local_rotation(self.new_local_rotation)
+        self.bone.set_axial_rotation(self.new_axial_rotation)
         self.bone.set_angular_velocity(self.new_angular_velocity)
         self.bone.set_linear_velocity(self.new_linear_velocity)   
 
@@ -168,9 +176,9 @@ class Simulator:
         - get_head_position() - gets the position of the head of the bone
         - get_tail_position() - gets the position of the tail of the bone
         - get_length() - gets the length of the bone
-        - get_local_rotation() - gets the rotation of the bone relative to its
+        - get_axial_rotation() - gets the rotation of the bone relative to its
                                 parent (in quaternions)
-        - set_local_rotation() - sets the rotation of the bone relative to its
+        - set_axial_rotation() - sets the rotation of the bone relative to its
                                 parent (in quaternions)
         - get_world_rotation() - gets the rotation of the bone in world space
         - get_mass() - gets the mass of the bone
@@ -253,7 +261,7 @@ class Simulator:
                 bone.apply_force(-self.rig.damping * bone.compute_head_velocity(), bone.get_head_position())
                 bone.apply_force(-self.rig.damping * bone.compute_tail_velocity(), bone.get_tail_position())
 
-                # bone.apply_force(bone.bone.get_mass() * Vector((0, 0, -1)), bone.get_center_position())
+                # print(bone.new_axial_rotation)
 
             # External Forces (control springs)
             for cp in cps:
