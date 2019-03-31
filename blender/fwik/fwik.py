@@ -260,35 +260,39 @@ class Simulator:
                 un_rot_z = rot.z - (min_rz + range_rz * tolerance)
 
                 # Compute torque (linear w.r.t. angle)
-                torque_x = 0
-                torque_y = 0
-                torque_z = 0
+                delta_x = 0
+                delta_y = 0
+                delta_z = 0
 
                 if bone.bone.use_ik_limit_x():
                     if ov_rot_x > 0:
-                        torque_x = -k * ov_rot_x
+                        delta_x = ov_rot_x
                     elif un_rot_x < 0:
-                        torque_x = -k * un_rot_x
+                        delta_x = un_rot_x
                 
                 if bone.bone.use_ik_limit_y():
                     if ov_rot_y > 0:
-                        torque_y = -k * ov_rot_y
+                        delta_y = ov_rot_y
                     elif un_rot_y < 0:
-                        torque_y = -k * un_rot_y
+                        delta_y = un_rot_y
                 
                 if bone.bone.use_ik_limit_z():
                     if ov_rot_z > 0:
-                        torque_z = -k * ov_rot_z
+                        delta_z = ov_rot_z
                     elif un_rot_z < 0:
-                        torque_z= -k * un_rot_z
+                        delta_z = un_rot_z
                 
-                torque = Vector([torque_x, torque_y, torque_z])
+                delta = Vector([delta_x, delta_y, delta_z])
+
+                #linear
+                torque = -k * delta
+                # capped linear
+                # torque = -k * delta / max(delta.length, 1)
 
                 # Apply torque
-                if torque:
-                    bone.apply_axial_torque(torque)
-                    if parent:
-                        parent.apply_axial_torque(-torque)
+                bone.apply_axial_torque(torque)
+                if parent:
+                    parent.apply_axial_torque(-torque)
 
 
             def internal_forces():
