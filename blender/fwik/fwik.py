@@ -230,7 +230,7 @@ class Simulator:
         def step():
             def torsion_forces(bone):
                 tolerance = .1
-                k = 6
+                k = 20
 
                 parent = bone.get_parent_bone()
 
