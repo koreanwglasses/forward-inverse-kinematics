@@ -254,7 +254,7 @@ class MakeFWIKControlPoint(bpy.types.Operator):
         min=0.0, max=1.0, default=1.0)
     spring_constant = bpy.props.FloatProperty(name="Spring Constant",\
         description="The spring constant of the 'spring' connected to the bone. Higher means more influence.",\
-        min=0.0, default=1.0)
+        min=0.0, default=10.0)
 
     @classmethod
     def poll(cls, context):
