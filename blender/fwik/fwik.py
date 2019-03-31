@@ -280,7 +280,6 @@ class Simulator:
                     torque_z= -k * un_rot_z
                 
                 torque = Vector([torque_x, torque_y, torque_z])
-                print(torque)
 
                 # Apply torque
                 if torque:
