@@ -264,20 +264,23 @@ class Simulator:
                 torque_y = 0
                 torque_z = 0
 
-                if ov_rot_x > 0:
-                    torque_x = -k * ov_rot_x
-                elif un_rot_x < 0:
-                    torque_x = -k * un_rot_x
+                if bone.bone.use_ik_limit_x():
+                    if ov_rot_x > 0:
+                        torque_x = -k * ov_rot_x
+                    elif un_rot_x < 0:
+                        torque_x = -k * un_rot_x
                 
-                if ov_rot_y > 0:
-                    torque_y = -k * ov_rot_y
-                elif un_rot_y < 0:
-                    torque_y = -k * un_rot_y
+                if bone.bone.use_ik_limit_y():
+                    if ov_rot_y > 0:
+                        torque_y = -k * ov_rot_y
+                    elif un_rot_y < 0:
+                        torque_y = -k * un_rot_y
                 
-                if ov_rot_z > 0:
-                    torque_z = -k * ov_rot_z
-                elif un_rot_z < 0:
-                    torque_z= -k * un_rot_z
+                if bone.bone.use_ik_limit_z():
+                    if ov_rot_z > 0:
+                        torque_z = -k * ov_rot_z
+                    elif un_rot_z < 0:
+                        torque_z= -k * un_rot_z
                 
                 torque = Vector([torque_x, torque_y, torque_z])
 
