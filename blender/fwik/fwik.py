@@ -259,7 +259,7 @@ class Simulator:
                 ov_rot_z = rot.z - (max_rz - range_rz * tolerance)
                 un_rot_z = rot.z - (min_rz + range_rz * tolerance)
 
-                # Compute torque
+                # Compute torque (linear w.r.t. angle)
                 torque_x = 0
                 torque_y = 0
                 torque_z = 0
@@ -321,8 +321,8 @@ class Simulator:
             for bone in bones:
                 bone.reset()
                 # Linear damping
-                # bone.apply_force(-self.rig.damping * bone.compute_head_velocity(), bone.get_head_position())
-                # bone.apply_force(-self.rig.damping * bone.compute_tail_velocity(), bone.get_tail_position())
+                bone.apply_force(-self.rig.damping * bone.compute_head_velocity(), bone.get_head_position())
+                bone.apply_force(-self.rig.damping * bone.compute_tail_velocity(), bone.get_tail_position())
                 # Rotational damping
                 bone.apply_torque(-self.rig.damping * bone.new_angular_velocity)
 
@@ -336,8 +336,12 @@ class Simulator:
                     # Vector from control point to attachment point
                     r = cp.get_position() - cp.get_attachment_position()
 
-                    # Hooke's law / Spring force with rest length = 0
-                    f = cp.get_spring_constant() * r
+                    # Hooke's law / Linear spring force with rest length = 0
+                    # f = cp.get_spring_constant() * r
+
+                    # Capped linear force spring (constant/linear hybrid)
+                    f = cp.get_spring_constant() * r / max(r.length, 1)
+
                     bone.apply_force(f, cp.get_attachment_position())
 
             # Torsion forces
