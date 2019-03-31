@@ -94,6 +94,23 @@ class FWIKBone:
     def set_linear_velocity(self, lv):
         self.pose_bone['fwik_linear_velocity'] = lv
 
+    def get_min_rot_x(self):
+        return self.pose_bone.ik_min_x
+
+    def get_max_rot_x(self):
+        return self.pose_bone.ik_max_x
+
+    def get_min_rot_y(self):
+        return self.pose_bone.ik_min_y
+
+    def get_max_rot_y(self):
+        return self.pose_bone.ik_max_y
+
+    def get_min_rot_z(self):
+        return self.pose_bone.ik_min_z
+
+    def get_max_rot_z(self):
+        return self.pose_bone.ik_max_z
 
 
 class FWIKControlPoint:

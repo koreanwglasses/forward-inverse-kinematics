@@ -114,6 +114,12 @@ class PhysBone:
 
         self.net_torque += torque
 
+    def apply_torque(self, torque):
+        self.net_torque += torque
+
+    def apply_axial_torque(self, axial_torque):
+        self.net_torque += self.get_world_to_axial().inverted() * axial_torque
+
     def get_world_to_axial(self):
         bone_axes = self.bone.get_bone_axes_to_world()
         axial = self.bone.get_axial_rotation().to_matrix()
@@ -226,6 +232,67 @@ class Simulator:
         dt = self.time_step
 
         def step():
+            def torsion_forces(bone):
+                tolerance = .1
+                k = 6
+
+                parent = bone.get_parent_bone()
+
+                # Compute spring bounds
+                min_rx = bone.bone.get_min_rot_x()
+                max_rx = bone.bone.get_max_rot_x()
+                range_rx = max_rx - min_rx
+
+                min_ry = bone.bone.get_min_rot_y()
+                max_ry = bone.bone.get_max_rot_y()
+                range_ry = max_ry - min_ry
+
+                min_rz = bone.bone.get_min_rot_z()
+                max_rz = bone.bone.get_max_rot_z()
+                range_rz = max_rz - min_rz
+
+                # Compute rotations
+                rot = bone.new_axial_rotation.to_exponential_map()
+
+                ov_rot_x = rot.x - (max_rx - range_rx * tolerance)
+                un_rot_x = rot.x - (min_rx + range_rx * tolerance)
+
+                ov_rot_y = rot.y - (max_ry - range_ry * tolerance)
+                un_rot_y = rot.y - (min_ry + range_ry * tolerance)
+
+                ov_rot_z = rot.z - (max_rz - range_rz * tolerance)
+                un_rot_z = rot.z - (min_rz + range_rz * tolerance)
+
+                # Compute torque
+                torque_x = 0
+                torque_y = 0
+                torque_z = 0
+
+                if ov_rot_x > 0:
+                    torque_x = -k * ov_rot_x
+                elif un_rot_x < 0:
+                    torque_x = -k * un_rot_x
+                
+                if ov_rot_y > 0:
+                    torque_y = -k * ov_rot_y
+                elif un_rot_y < 0:
+                    torque_y = -k * un_rot_y
+                
+                if ov_rot_z > 0:
+                    torque_z = -k * ov_rot_z
+                elif un_rot_z < 0:
+                    torque_z= -k * un_rot_z
+                
+                torque = Vector([torque_x, torque_y, torque_z])
+                print(torque)
+
+                # Apply torque
+                if torque:
+                    bone.apply_axial_torque(torque)
+                    if parent:
+                        parent.apply_axial_torque(-torque)
+
+
             def internal_forces():
                 max_diff = 0
                 for bone in bones:
@@ -258,8 +325,11 @@ class Simulator:
             # Body forces and damping
             for bone in bones:
                 bone.reset()
-                bone.apply_force(-self.rig.damping * bone.compute_head_velocity(), bone.get_head_position())
-                bone.apply_force(-self.rig.damping * bone.compute_tail_velocity(), bone.get_tail_position())
+                # Linear damping
+                # bone.apply_force(-self.rig.damping * bone.compute_head_velocity(), bone.get_head_position())
+                # bone.apply_force(-self.rig.damping * bone.compute_tail_velocity(), bone.get_tail_position())
+                # Rotational damping
+                bone.apply_torque(-self.rig.damping * bone.new_angular_velocity)
 
                 # print(bone.new_axial_rotation)
 
@@ -274,6 +344,10 @@ class Simulator:
                     # Hooke's law / Spring force with rest length = 0
                     f = cp.get_spring_constant() * r
                     bone.apply_force(f, cp.get_attachment_position())
+
+            # Torsion forces
+            for bone in bones:
+                torsion_forces(bone)
 
             # Internal Forces (joint forces)
             # iters = 0
