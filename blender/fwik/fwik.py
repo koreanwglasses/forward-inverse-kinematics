@@ -1,10 +1,6 @@
 import bpy
 from mathutils import *
 
-def solve_newton_euler(net_force, net_torque, pivot, center_of_mass, angular_velocity):
-    
-    pass
-
 class PhysBone:
     '''
     A wrapper for the bone to perform calculations and modify the actual bone
