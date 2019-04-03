@@ -27,6 +27,8 @@ class PhysBone:
                                     [0, principle_moment_y, 0],
                                     [0, 0, principle_moment_x]])
 
+        self.translation = Vector([0,0,0])
+
     def get_parent_bone(self):
         return self.parent.get_physbone(self.bone.get_parent())
 
@@ -48,7 +50,9 @@ class PhysBone:
     def compute_head_velocity(self):
         parent_bone = self.get_parent_bone()
         if parent_bone == None:
-            return self.new_linear_velocity
+            center_pos = self.get_center_position()
+            head_pos = self.get_head_position()
+            return self.new_linear_velocity + self.new_angular_velocity.cross(head_pos - center_pos)
         else:
             return parent_bone.compute_tail_velocity()
 
@@ -124,6 +128,7 @@ class PhysBone:
 
     # Find new position and rotation based on force and torque
     def integrate(self, dt):
+        # angular
         angular_accel = self.compute_angular_acceleration()
         self.new_angular_velocity += angular_accel * dt
 
@@ -136,6 +141,11 @@ class PhysBone:
 
         self.new_axial_rotation.rotate(delta_rot)
 
+        # linear
+        self.new_linear_velocity += self.compute_linear_acceleration() * dt
+        self.translation = self.compute_head_velocity() * dt
+        # self.translation += self.new_linear_velocity * dt
+
     def apply(self):
         '''
         Apply updated values for rotation, angular velocity, and linear velocity
@@ -144,6 +154,9 @@ class PhysBone:
         self.bone.set_axial_rotation(self.new_axial_rotation)
         self.bone.set_angular_velocity(self.new_angular_velocity)
         self.bone.set_linear_velocity(self.new_linear_velocity)   
+
+        if self.bone.get_parent() == None:
+            self.bone.translate(self.translation)
 
 class Simulator:
     '''
@@ -300,13 +313,14 @@ class Simulator:
                 for bone in bones:
                     parent = bone.get_parent_bone()
                     if parent == None:
-                        M = bone.compute_force_acceleration_matrix(bone.get_head_position())
-                        ha = bone.compute_head_acceleration()
+                        # M = bone.compute_force_acceleration_matrix(bone.get_head_position())
+                        # ha = bone.compute_head_acceleration()
 
-                        diff = ha
+                        # diff = ha
 
-                        Fr = M.inverted() * -ha
-                        bone.apply_force(Fr, bone.get_head_position())
+                        # Fr = M.inverted() * -ha
+                        # bone.apply_force(Fr, bone.get_head_position())
+                        pass
                     else:
                         M1 = parent.compute_force_acceleration_matrix(parent.get_tail_position())
                         M2 = bone.compute_force_acceleration_matrix(bone.get_head_position())
@@ -319,7 +333,7 @@ class Simulator:
                         parent.apply_force(Fr, parent.get_tail_position())
                         bone.apply_force(-Fr, bone.get_head_position())
 
-                    max_diff = max(max_diff, abs(diff.length))
+                        max_diff = max(max_diff, abs(diff.length))
                 return max_diff
 
             # print("~~~~~")
@@ -330,6 +344,7 @@ class Simulator:
                 # Linear damping
                 bone.apply_force(-self.rig.damping * bone.compute_head_velocity(), bone.get_head_position())
                 bone.apply_force(-self.rig.damping * bone.compute_tail_velocity(), bone.get_tail_position())
+                # bone.apply_force(-self.rig.damping * bone.new_linear_velocity, bone.get_center_position())
                 # Rotational damping
                 bone.apply_torque(-self.rig.damping * bone.new_angular_velocity)
 

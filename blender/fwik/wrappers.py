@@ -121,6 +121,8 @@ class FWIKBone:
     def get_max_rot_z(self):
         return self.pose_bone.ik_max_z
 
+    def translate(self, translation):
+        self.pose_bone.location += translation
 
 class FWIKControlPoint:
     def __init__(self, object):
