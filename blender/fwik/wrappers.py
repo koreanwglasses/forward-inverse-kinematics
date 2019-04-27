@@ -2,6 +2,8 @@ import bpy
 import mathutils
 import math
 
+import profile
+
 from . import fwik
 
 class FWIKBone:
@@ -29,12 +31,8 @@ class FWIKBone:
     def get_average_radius(self):
         return 0.5
 
-    def get_child(self):
-        if self.pose_bone.child == None:
-            return None
-        else:
-            bone = self.armature.pose.bones[self.pose_bone.child.name]
-            return FWIKBone(self.armature, bone)
+    def get_children(self):
+        return [ FWIKBone(self.armature, bone) for bone in self.pose_bone.children ]
 
     def get_tail_position(self):
         return self.armature.matrix_world * self.pose_bone.tail
@@ -80,7 +78,7 @@ class FWIKBone:
         return self.armature.matrix_world.to_3x3() * bone_axes
 
     def get_mass(self):
-        return self.pose_bone['fwik_mass']
+        return self.pose_bone['fwik_mass'] * self.get_length()
 
     def get_angular_velocity(self):
         return mathutils.Vector(self.pose_bone['fwik_angular_velocity'])
@@ -120,6 +118,9 @@ class FWIKBone:
 
     def get_max_rot_z(self):
         return self.pose_bone.ik_max_z
+
+    def use_local_location(self):
+        return self.pose_bone.bone.use_local_location
 
     def translate(self, translation):
         self.pose_bone.location += translation
@@ -226,8 +227,25 @@ class FWIKRig:
     def get_bones(self):
         return [FWIKBone(self.armature, bone) for bone in self.armature.pose.bones]
 
-    def simulate(self, iterations, dt):
-        fwik.Simulator(rig=self, iterations=iterations, time_step=dt).run()
+    def simulate(self, iterations, dt, iteration=None):
+        sim = fwik.Simulator(rig=self, iterations=iterations, time_step=dt, iteration=iteration)
+        # p = profile.Profile()
+        # p.runcall(sim.run)
+        # p.print_stats('cumulative')
+        sim.run()
+
+    def record_keyframe(self):
+        for bone in self.armature.pose.bones:
+            if bone.parent == None:
+                bone.keyframe_insert(data_path="location", index=-1)
+
+            mode = bone.rotation_mode
+            if mode == 'QUATERNION':
+                bone.keyframe_insert(data_path="rotation_quaternion", index=-1)
+            elif mode == 'AXIS_ANGLE':
+                bone.keyframe_insert(data_path="rotation_axis_angle", index=-1)
+            else:
+                bone.keyframe_insert(data_path="rotation_euler", index=-1)
 
     ##################################
     #### Static Interface Methods ####
@@ -392,6 +410,10 @@ class TestFWIK(bpy.types.Operator):
 
             self._timer = context.window_manager.event_timer_add(.1, context.window)
             context.window_manager.modal_handler_add(self)
+
+            # For control point debugging
+            self.counter = 0
+
             print('Running animation...')
             return {'RUNNING_MODAL'}
         else:
@@ -404,14 +426,53 @@ class TestFWIK(bpy.types.Operator):
             return self.cancel(context)
 
         if event.type == 'TIMER':
-            self.frig.simulate(iterations=1, dt=0.05)
+            self.frig.simulate(iterations=100, dt=0.05, iteration=self.counter)
+            self.counter += 1
+            # if self.counter == 160:
+            #     self.counter = 0
+            #     return self.cancel(context)
+
+            # self.frig.simulate(iterations=1, dt=0.05)
 
         return {'PASS_THROUGH'}
 
     def cancel(self, context):
         context.window_manager.event_timer_remove(self._timer)
+        self.counter = 0
         print('Stopped')
         return {'CANCELLED'}
+
+class BakeFWIK(bpy.types.Operator):
+    """Animates and records the rig with PhysIK"""
+    bl_idname = "object.bake_fwik"
+    bl_label = "Bake FWIK"
+
+    def execute(self, context):
+        scene = bpy.context.scene
+        active = scene.objects.active
+
+        fwik_rig = None
+
+        if FWIKRig.isFWIKRig(active):
+            fwik_rig = active
+
+        if active != None and FWIKRig.isFWIKRig(active.parent):
+            fwik_rig = active.parent
+
+        if fwik_rig == None:
+            print('No FWIK rig selected.')
+            return {'CANCELLED'}
+
+        frig = FWIKRig(fwik_rig)
+
+        for i in range(scene.frame_start, scene.frame_end):
+            scene.frame_set(i)
+            # frig.simulate(iterations=1, dt=0.05)
+            frig.simulate(iterations=200, dt=0.05, iteration=min(i, 200))
+            frig.record_keyframe()
+
+        return {'FINISHED'}
+
 
 ########################
 #### Register Props ####
