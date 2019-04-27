@@ -6,7 +6,7 @@
 \usepackage[T1]{fontenc}
 
 %% Sets page size and margins
-\usepackage[a4paper,top=2cm,bottom=2cm,left=2cm,right=2cm,marginparwidth=1.75cm]{geometry}
+\usepackage[letterpaper,top=1in,bottom=1in,left=1in,right=1in,marginparwidth=.5in]{geometry}
 
 %% Useful packages
 \usepackage{amsmath}
@@ -272,7 +272,7 @@ In each of the following examples, the $\Delta t$ used to step the simulation wa
 
 \begin{figure}[]
     \centering
-    \includegraphics[width=0.7\columnwidth] {pose-frame.png}
+    \includegraphics[width=0.7\columnwidth] {pose-frame.jpg}
     \caption{A static running pose.}
     \label{img:running}
 \end{figure}
@@ -299,7 +299,62 @@ For a comparison of accuracy on linear and capped-linear springs, two examples w
 
 Another aspect of accuracy can be seen in the next example with linear and capped-linear springs. When the control point is instantly moved to a point far away, the simulation initially diverges for the linear spring, and converges to a strange pose, especially near the elbow and hips (see figure \ref{img:cannon}). When capped linear springs are used, the algorithm converges to stably, though it takes a few more iterations.
 
-\begin{figure*}
+
+There are cases, however, where the algorithm fails to converge entirely. When angular constraints are stressed and one of the bones in the chain have enough degrees of freedom, then oscillation can occur around the control point. For example, in figure \ref{img:wobble}, the tip of the hand will oscillate around the target point indefinitely. This is most likely caused by the inaccuracies of Euler integration combined with the extra degrees of freedom that allows for such behavior.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.7\columnwidth] {wobble-frame.jpg}
+    \caption{A configuration where the tip of the hand oscillates around the target point.}
+    \label{img:wobble}
+\end{figure}
+
+\paragraph{Interactivity.} The poses above were created starting with the pose in figure \ref{img:pinhead}, then adding and manipulating control points. The pose in figure \ref{img:running} was completed in under a minute, with the simulation converging than 3 seconds whenever a control point was moved to its target position.
+
+When using the profile module in Python\textsuperscript{\cite{Pr}} to evaluate the speed of the algorithm, it reported an average of $\sim 98$ms per frame for the humanoid rig, with $\sim 70$ms spent on computing inter-joint forces, with around $\sim 20$ passes per step. 
+
+The rig is simulated live while posing the rig, which makes it easier to see how the rig will move into place. It also leaves the overhead of deciding how many iterations to run to the user (i.e. it runs until the user deems that the system has converged enough). While this may not be ideal (see discussion), it also helps to hide the relatively long running time per step. When run at 100ms per frame, the tool still feels smooth enough and fast enough to use practically.
+
+\paragraph{Intuitiveness.} Intuitiveness is difficult to measure quantitatively and is up to the preference of the user. Presented in figure \ref{img:hand} are comparisons of Blender's iTasC solver with the PhysIK algorithm on a pose with a single outstretched hand. The angular constraints are the same in both cases, and both have 3 points to specify the position of the rig. Note how the shoulder in the PhysIK pose is turned toward the viewer, and the character is leaning slightly forward. As a bonus, the head also has a slight tilt. Compare this to the stiff pose computed by Blender's iTasC solver. 
+
+\begin{figure}[h]
+    \centering
+    \begin{subfigure}{\columnwidth}
+        \centering
+        \includegraphics[width=.8\linewidth]{pose-hand.png}
+    \end{subfigure}
+    
+    \begin{subfigure}{\columnwidth}
+        \centering
+        \includegraphics[width=.8\linewidth]{pose-hand-itasc.png}
+    \end{subfigure}
+
+    \caption{A comparison of PhysIK (top) and iTasC (bottom) on a pose with an outstretched hand.}
+    \label{img:hand}
+\end{figure}
+
+To see how control point interpolation affects the results, consider the following. Figure \ref{img:raise} compares polar interpolation about the center of mass and linear interpolation. The control point is interpolated for the first 50 steps (250ms) and the rest is simulated normally. Note how the linear interpolation causes more secondary motion while the circular arc, which would be a more natural path for the arm, results in a more natural looking pose.
+
+
+As a final example, frames of a sitting animation created with PhysIK with only a single moving control point and 4 static control points are included in figure \ref{img:sit}. 
+
+
+\section{Discussion \& Future Work}
+
+PhysIK makes it easier to create poses from scratch, with interactive simulations and force-based posing making the who process of posing and animating more intuitive. By simulating external forces, PhysIK mimics the action of posing a wooden mannequin, resulting in natural poses with plausible secondary motion, even with a small number of control points. It does, of course, have its limitations.
+
+The physical simulation in PhysIK can be sensitive to a change in the damping coefficient. If the damping coefficient is too large, then with the Euler's method integration used in this paper, any slight movement is over-corrected, and the resulting oscillations diverge, rendering the tool useless. Too small, and the simulation takes too long to converge. The ideal range of values for the damping coefficient depends on the scale of the model and the mass of each bone. A way to automatically compute the ideal damping coefficient or a different method of damping altogether would help to make the tool even more intuitive. 
+
+PhysIK also breaks down when there are too many tight angular constraints which create a lot of torsion forces. For example, consider a hand, where the carpals are highly constrained in their relative rotations with the metacarpals, which are in turn highly constrained in their relative rotations to the wrist, or root node. Small perturbations tend to be amplified by errors in integration, and any attempt to modify the rig using control points causes the rig to explode. Perhaps better methods of integration or enforcing angular constraints can be explored to mitigate this issue.
+
+PhysIK can also be slow. It may not be desirable to have to wait for the rig to converge onto its target points. In this case, it may be beneficial to pair the physical simulation with CCD or some other fast IK solver. The challenge here would be figuring out when to stop the physical simulation and switch over to the other solver.
+
+In conclusion, even with its current flaws, PhysIK demonstrates the potential to be a useful tool for interactive character posing and animation.
+
+\bibliography{research}
+\bibliographystyle{ieeetr}
+
+\begin{figure*}[]
     \centering
     \begin{subfigure}{0.2\textwidth}
         \centering
@@ -344,127 +399,77 @@ Another aspect of accuracy can be seen in the next example with linear and cappe
     \label{img:cannon}
 \end{figure*}
 
-There are cases, however, where the algorithm fails to converge entirely. When angular constraints are stressed and one of the bones in the chain have enough degrees of freedom, then oscillation can occur around the control point. For example, in figure \ref{img:wobble}, the tip of the hand will oscillate around the target point indefinitely. This is most likely caused by the inaccuracies of Euler integration combined with the extra degrees of freedom that allows for such behavior.
-
-\begin{figure}[]
-    \centering
-    \includegraphics[width=0.7\columnwidth] {wobble-frame.png}
-    \caption{A configuration where the tip of the hand oscillates around the target point.}
-    \label{img:wobble}
-\end{figure}
-
-\paragraph{Interactivity.} The poses above were created starting with the pose in figure \ref{img:pinhead}, then adding and manipulating control points. The pose in figure \ref{img:running} was completed in under a minute, with the simulation converging than 3 seconds whenever a control point was moved to its target position.
-
-When using the profile module in Python\textsuperscript{\cite{Pr}} to evaluate the speed of the algorithm, it reported an average of $\sim 98$ms per frame for the humanoid rig, with $\sim 70$ms spent on computing inter-joint forces, with around $\sim 20$ passes per step. 
-
-The rig is simulated live while posing the rig, which makes it easier to see how the rig will move into place. It also leaves the overhead of deciding how many iterations to run to the user (i.e. it runs until the user deems that the system has converged enough). While this may not be ideal (see discussion), it also helps to hide the relatively long running time per step. When run at 100ms per frame, the tool still feels smooth enough and fast enough to use practically.
-
-\paragraph{Intuitiveness.} Intuitiveness is difficult to measure quantitatively and is up to the preference of the user. Presented below figure \ref{img:hand} are comparisons of Blender's iTasC solver with the PhysIK algorithm on a pose with a single outstretched hand. The angular constraints are the same in both cases, and both have 3 points to specify the position of the rig. Note how the shoulder in the PhysIK pose is turned toward the viewer, and the character is leaning slightly forward. As a bonus, the head also has a slight tilt. Compare this to the stiff pose computed by Blender's iTasC solver. 
-
-\begin{figure}
-    \centering
-    \begin{subfigure}{\columnwidth}
-        \centering
-        \includegraphics[width=.8\linewidth]{pose-hand.png}
-    \end{subfigure}
-    
-    \begin{subfigure}{\columnwidth}
-        \centering
-        \includegraphics[width=.8\linewidth]{pose-hand-itasc.png}
-    \end{subfigure}
-
-    \caption{A comparison of PhysIK (top) and iTasC (bottom) on a pose with an outstretched hand.}
-    \label{img:hand}
-\end{figure}
-
-To see how control point interpolation affects the results, consider the following set of frames. Figure \ref{img:raise} compares polar interpolation about the center of mass and linear interpolation. The control point is interpolated for the first 50 steps (250ms) and the rest is simulated normally. Note how the linear interpolation causes more secondary motion while the circular arc, which would be a more natural path for the arm, results in a more natural looking pose.
-
-\begin{figure*}[h]
+\begin{figure*}[]
     \centering
     \begin{subfigure}{0.2\textwidth}
         \centering
-        \includegraphics[width=.9\linewidth]{raise-circ-0.png}
+        \includegraphics[width=.9\linewidth]{raise-circ-0.jpg}
         \caption{step 0, $t=0$ms}
     \end{subfigure}\begin{subfigure}{0.2\textwidth}
         \centering
-        \includegraphics[width=.9\linewidth]{raise-circ-1.png}
+        \includegraphics[width=.9\linewidth]{raise-circ-1.jpg}
         \caption{step 20, $t=100$ms}
     \end{subfigure}\begin{subfigure}{0.2\textwidth}
         \centering
-        \includegraphics[width=.9\linewidth]{raise-circ-2.png}
+        \includegraphics[width=.9\linewidth]{raise-circ-2.jpg}
         \caption{step 40, $t=200$ms}
     \end{subfigure}\begin{subfigure}{0.2\textwidth}
         \centering
-        \includegraphics[width=.9\linewidth]{raise-circ-3.png}
+        \includegraphics[width=.9\linewidth]{raise-circ-3.jpg}
         \caption{step 60, $t=300$ms}
     \end{subfigure}\begin{subfigure}{0.2\textwidth}
         \centering
-        \includegraphics[width=.9\linewidth]{raise-circ-4.png}
+        \includegraphics[width=.9\linewidth]{raise-circ-4.jpg}
         \caption{step 80, $t=400$ms}
     \end{subfigure}
 
     \begin{subfigure}{0.2\textwidth}
         \centering
-        \includegraphics[width=.9\linewidth]{raise-linear-0.png}
+        \includegraphics[width=.9\linewidth]{raise-linear-0.jpg}
     \end{subfigure}\begin{subfigure}{0.2\textwidth}
         \centering
-        \includegraphics[width=.9\linewidth]{raise-linear-1.png}
+        \includegraphics[width=.9\linewidth]{raise-linear-1.jpg}
     \end{subfigure}\begin{subfigure}{0.2\textwidth}
         \centering
-        \includegraphics[width=.9\linewidth]{raise-linear-2.png}
+        \includegraphics[width=.9\linewidth]{raise-linear-2.jpg}
     \end{subfigure}\begin{subfigure}{0.2\textwidth}
         \centering
-        \includegraphics[width=.9\linewidth]{raise-linear-3.png}
+        \includegraphics[width=.9\linewidth]{raise-linear-3.jpg}
     \end{subfigure}\begin{subfigure}{0.2\textwidth}
         \centering
-        \includegraphics[width=.9\linewidth]{raise-linear-4.png}
+        \includegraphics[width=.9\linewidth]{raise-linear-4.jpg}
     \end{subfigure}
 
     \caption{A comparison of polar interpolation about the center of mass (top row) and linear interpolation (bottom row) of the control point.}
     \label{img:raise}
 \end{figure*}
 
-As a final example, consider the following frames of a sitting animation created with PhysIK with only a single moving control point and 4 static control points figure \ref{img:sit}. 
-
 \begin{figure*}
     \centering
     \begin{subfigure}{0.2\textwidth}
         \centering
-        \includegraphics[width=.9\linewidth]{sit-0.png}
+        \includegraphics[width=.9\linewidth]{sit-0.jpg}
         \caption{step 0, $t=0$s}
     \end{subfigure}\begin{subfigure}{0.2\textwidth}
         \centering
-        \includegraphics[width=.9\linewidth]{sit-1.png}
+        \includegraphics[width=.9\linewidth]{sit-1.jpg}
         \caption{step 40, $t=1$s}
     \end{subfigure}\begin{subfigure}{0.2\textwidth}
         \centering
-        \includegraphics[width=.9\linewidth]{sit-2.png}
+        \includegraphics[width=.9\linewidth]{sit-2.jpg}
         \caption{step 80, $t=2$s}
     \end{subfigure}\begin{subfigure}{0.2\textwidth}
         \centering
-        \includegraphics[width=.9\linewidth]{sit-3.png}
+        \includegraphics[width=.9\linewidth]{sit-3.jpg}
         \caption{step 120, $t=3$s}
     \end{subfigure}\begin{subfigure}{0.2\textwidth}
         \centering
-        \includegraphics[width=.9\linewidth]{sit-4.png}
+        \includegraphics[width=.9\linewidth]{sit-4.jpg}
         \caption{step 160, $t=4$s}
     \end{subfigure}
 
     \caption{Frames of a sitting animation}
     \label{img:sit}
 \end{figure*}
-
-\section{Discussion \& Future Work}
-
-PhysIK makes it easier to create poses from scratch, with interactive simulations and force-based posing making the who process of posing and animating more intuitive. By simulating external forces, PhysIK mimics the action of posing a wooden mannequin, resulting in natural poses with plausible secondary motion, even with a small number of control points. It does, of course, have its limitations.
-
-The physical simulation in PhysIK can be sensitive to a change in the damping coefficient. If the damping coefficient is too large, then with the Euler's method integration used in this paper, any slight movement is over-corrected, and the resulting oscillations diverge, rendering the tool useless. Too small, and the simulation takes too long to converge. The ideal range of values for the damping coefficient depends on the scale of the model and the mass of each bone. A way to automatically compute the ideal damping coefficient or a different method of damping altogether would help to make the tool even more intuitive. 
-
-PhysIK also breaks down when there are too many tight angular constraints which create a lot of torsion forces. For example, consider a hand, where the carpals are highly constrained in their relative rotations with the metacarpals, which are in turn highly constrained in their relative rotations to the wrist, or root node. Small perturbations tend to be amplified by errors in integration, and any attempt to modify the rig using control points causes the rig to explode. Perhaps better methods of integration or enforcing angular constraints can be explored to mitigate this issue.
-
-PhysIK can also be slow. It may not be desirable to have to wait for the rig to converge onto its target points. In this case, it may be beneficial to pair the physical simulation with CCD or some other fast IK solver. The challenge here would be figuring out when to stop the physical simulation and switch over to the other solver.
-
-\bibliography{research}
-\bibliographystyle{ieeetr}
 
 \end{document}
